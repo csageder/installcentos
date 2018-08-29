@@ -156,6 +156,8 @@ oc adm policy add-cluster-role-to-user cluster-admin ${USERNAME}
 
 sudo systemctl restart origin-master-api
 
+curl -o vol.ymal $SCRIPT_REPO/vol.yaml
+
 if [ "$PVS" = "true" ]; then
 	for i in `seq 1 20`;
 	do
