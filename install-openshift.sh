@@ -9,7 +9,7 @@ export DOMAIN=${DOMAIN:="$(curl -s ipinfo.io/ip).nip.io"}
 export USERNAME=${USERNAME:="$(whoami)"}
 export PASSWORD=${PASSWORD:=password}
 export VERSION=${VERSION:="3.9.0"}
-export SCRIPT_REPO=${SCRIPT_REPO:="https://raw.githubusercontent.com/gshipley/installcentos/master"}
+export SCRIPT_REPO=${SCRIPT_REPO:="https://raw.githubusercontent.com/csageder/installcentos/master"}
 export IP=${IP:="$(ip route get 8.8.8.8 | awk '{print $NF; exit}')"}
 export API_PORT=${API_PORT:="8443"}
 
@@ -132,7 +132,7 @@ if [ "$memory" -lt "8388608" ]; then
 	export LOGGING="False"
 fi
 
-#curl -o inventory.download $SCRIPT_REPO/inventory.ini
+curl -o inventory.ini $SCRIPT_REPO/inventory.ini
 #envsubst < inventory.download > inventory.ini
 
 # add proxy in inventory.ini if proxy variables are set
