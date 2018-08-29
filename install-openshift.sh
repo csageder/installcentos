@@ -57,10 +57,10 @@ echo "* OpenShift version: $VERSION "
 echo "******"
 
 # install updates
-yum update -y
+sudo yum update -y
 
 # install the following base packages
-yum install -y  wget git zile nano net-tools docker-1.13.1\
+sudo yum install -y  wget git zile nano net-tools docker-1.13.1\
 				bind-utils iptables-services \
 				bridge-utils bash-completion \
 				kexec-tools sos psacct openssl-devel \
@@ -69,25 +69,25 @@ yum install -y  wget git zile nano net-tools docker-1.13.1\
 				java-1.8.0-openjdk-headless "@Development Tools"
 
 #install epel
-yum -y install epel-release
+sudo yum -y install epel-release
 
 # Disable the EPEL repository globally so that is not accidentally used during later steps of the installation
-sed -i -e "s/^enabled=1/enabled=0/" /etc/yum.repos.d/epel.repo
+sudo sed -i -e "s/^enabled=1/enabled=0/" /etc/yum.repos.d/epel.repo
 
-systemctl | grep "NetworkManager.*running" 
+sudo systemctl | grep "NetworkManager.*running" 
 if [ $? -eq 1 ]; then
-	systemctl start NetworkManager
-	systemctl enable NetworkManager
+	sudo systemctl start NetworkManager
+	sudo systemctl enable NetworkManager
 fi
 
 # install the packages for Ansible
-yum -y --enablerepo=epel install ansible pyOpenSSL
+sudo yum -y --enablerepo=epel install ansible pyOpenSSL
 
 [ ! -d openshift-ansible ] && git clone https://github.com/openshift/openshift-ansible.git
 
 cd openshift-ansible && git fetch && git checkout release-3.9 && cd ..
 
-cat <<EOD > /etc/hosts
+sudo cat <<EOD > /etc/hosts
 127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4 
 ::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
 ${IP}		$(hostname) console console.${DOMAIN}  
@@ -110,14 +110,14 @@ else
 	docker-storage-setup
 fi
 
-systemctl restart docker
-systemctl enable docker
+sudo systemctl restart docker
+sudo systemctl enable docker
 
-if [ ! -f ~/.ssh/id_rsa ]; then
-	ssh-keygen -q -f ~/.ssh/id_rsa -N ""
-	cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
-	ssh -o StrictHostKeyChecking=no root@$IP "pwd" < /dev/null
-fi
+#if [ ! -f ~/.ssh/id_rsa ]; then
+#	ssh-keygen -q -f ~/.ssh/id_rsa -N ""
+#	cat ~/.ssh/id_rsa.pub >> ~/.ssh/authorized_keys
+#	ssh -o StrictHostKeyChecking=no root@$IP "pwd" < /dev/null
+#fi
 
 export METRICS="True"
 export LOGGING="True"
@@ -132,8 +132,8 @@ if [ "$memory" -lt "8388608" ]; then
 	export LOGGING="False"
 fi
 
-curl -o inventory.download $SCRIPT_REPO/inventory.ini
-envsubst < inventory.download > inventory.ini
+#curl -o inventory.download $SCRIPT_REPO/inventory.ini
+#envsubst < inventory.download > inventory.ini
 
 # add proxy in inventory.ini if proxy variables are set
 if [ ! -z "${HTTPS_PROXY:-${https_proxy:-${HTTP_PROXY:-${http_proxy}}}}" ]; then
@@ -151,18 +151,18 @@ fi
 ansible-playbook -i inventory.ini openshift-ansible/playbooks/prerequisites.yml
 ansible-playbook -i inventory.ini openshift-ansible/playbooks/deploy_cluster.yml
 
-htpasswd -b /etc/origin/master/htpasswd ${USERNAME} ${PASSWORD}
+sudo htpasswd -b /etc/origin/master/htpasswd ${USERNAME} ${PASSWORD}
 oc adm policy add-cluster-role-to-user cluster-admin ${USERNAME}
 
-systemctl restart origin-master-api
+sudo systemctl restart origin-master-api
 
 if [ "$PVS" = "true" ]; then
-	for i in `seq 1 200`;
+	for i in `seq 1 20`;
 	do
 		DIRNAME="vol$i"
-		mkdir -p /mnt/data/$DIRNAME 
-		chcon -Rt svirt_sandbox_file_t /mnt/data/$DIRNAME
-		chmod 777 /mnt/data/$DIRNAME
+		sudo mkdir -p /mnt/data/$DIRNAME 
+		sudo chcon -Rt svirt_sandbox_file_t /mnt/data/$DIRNAME
+		sudo chmod 777 /mnt/data/$DIRNAME
 		
 		sed "s/name: vol/name: vol$i/g" vol.yaml > oc_vol.yaml
 		sed -i "s/path: \/mnt\/data\/vol/path: \/mnt\/data\/vol$i/g" oc_vol.yaml
