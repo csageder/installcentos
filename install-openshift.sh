@@ -8,7 +8,7 @@ export PVS=${INTERACTIVE:="true"}
 export DOMAIN=${DOMAIN:="$(curl -s ipinfo.io/ip).nip.io"}
 export USERNAME=${USERNAME:="$(whoami)"}
 export PASSWORD=${PASSWORD:=password}
-export VERSION=${VERSION:="3.9.0"}
+export VERSION=${VERSION:="3.11"}
 export SCRIPT_REPO=${SCRIPT_REPO:="https://raw.githubusercontent.com/csageder/installcentos/master"}
 export IP=${IP:="$(ip route get 8.8.8.8 | awk '{print $NF; exit}')"}
 export API_PORT=${API_PORT:="8443"}
@@ -81,11 +81,15 @@ if [ $? -eq 1 ]; then
 fi
 
 # install the packages for Ansible
-sudo yum -y --enablerepo=epel install ansible pyOpenSSL
+
+sudo yum -y --enablerepo=epel install pyOpenSSL
+
+curl -o ansible.rpm https://releases.ansible.com/ansible/rpm/release/epel-7-x86_64/ansible-2.6.5-1.el7.ans.noarch.rpm
+sudo yum -y --enablerepo=epel install ansible.rpm
 
 [ ! -d openshift-ansible ] && git clone https://github.com/openshift/openshift-ansible.git
 
-cd openshift-ansible && git fetch && git checkout release-3.9 && cd ..
+cd openshift-ansible && git fetch && git checkout release-${VERSION} && cd ..
 
 sudo bash -c 'cat <<EOD > /etc/hosts
 127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4 
@@ -128,7 +132,7 @@ if [ "$memory" -lt "4194304" ]; then
 	export METRICS="False"
 fi
 
-if [ "$memory" -lt "8388608" ]; then
+if [ "$memory" -lt "16777216" ]; then
 	export LOGGING="False"
 fi
 
@@ -148,18 +152,20 @@ if [ ! -z "${HTTPS_PROXY:-${https_proxy:-${HTTP_PROXY:-${http_proxy}}}}" ]; then
 	echo "openshift_no_proxy=\"${__no_proxy}\"" >> inventory.ini
 fi
 
+mkdir -p /etc/origin/master/
+touch /etc/origin/master/htpasswd
+
 ansible-playbook -i inventory.ini openshift-ansible/playbooks/prerequisites.yml
 ansible-playbook -i inventory.ini openshift-ansible/playbooks/deploy_cluster.yml
 
 sudo htpasswd -b /etc/origin/master/htpasswd ${USERNAME} ${PASSWORD}
 oc adm policy add-cluster-role-to-user cluster-admin ${USERNAME}
 
-sudo systemctl restart origin-master-api
-
-curl -o vol.ymal $SCRIPT_REPO/vol.yaml
-
 if [ "$PVS" = "true" ]; then
-	for i in `seq 1 20`;
+
+	curl -o vol.yaml $SCRIPT_REPO/vol.yaml
+
+	for i in `seq 1 200`;
 	do
 		DIRNAME="vol$i"
 		sudo mkdir -p /mnt/data/$DIRNAME 
